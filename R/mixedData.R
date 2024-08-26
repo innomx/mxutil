@@ -39,7 +39,9 @@ as_double.default <- function(obj, ...) {
 
 #' @export
 as_character.mixedData <- function(obj, ...) {
-    as.character(unclass(obj), ...)
+    num <- attr(obj, "numeric", exact=TRUE)
+    chr <- as.character(unclass(obj))
+    ifelse(is.na(num), chr, "<Number>")
 }
 
 #' @export
@@ -56,21 +58,16 @@ print.mixedData <- function(x, ...) {
 
 
 #' @export
-as.data.frame.mixedData <- function(x, ...) {
-    nm <- deparse(substitute(x), width.cutoff = 500L)
-    as.data.frame.vector(x, ..., nm = nm)
+as.data.frame.mixedData <- function(x, nm=deparse1(substitute(x)), ...) {
+    as.data.frame.vector(as_character(x), ..., nm=nm)
 }
 
 #' @export
 unique.mixedData <- function(x, ...) {
-    num <- attr(x, "numeric", exact=TRUE)
-    chr <- as.character(unclass(x))
-    unique(ifelse(is.na(num), chr, "<Number>"), ...)
+    unique(as_character(x), ...)
 }
 
 #' @export
 table.mixedData <- function(x, ...) {
-    num <- attr(x, "numeric", exact=TRUE)
-    chr <- as.character(unclass(x))
-    table(ifelse(is.na(num), chr, "<Number>"), ...)
+    table(as_character(x), ...)
 }

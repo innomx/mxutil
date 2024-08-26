@@ -675,7 +675,7 @@ count <- blk_count
 
 
 #' @export
-blk_changeFromBaseline <- function(x, id=noID(x), baseline=blk_singleValue(x, id, ind=bl.ind, select=bl.select), bl.ind=NULL, bl.select="first", diff.op="-", ...) {
+blk_changeFromBaseline <- function(x, id=noID(x), baseline=blk_singleValue(x, id, ind=ind, select=select), ind=NULL, select="first", diff.op="-", ...) {
     baseline <- blk_repeatValue(baseline, id2=id)
     .mymatchfun(diff.op)(x, baseline, ...)
 }
@@ -684,7 +684,7 @@ changeFromBaseline <- blk_changeFromBaseline
 
 
 #' @export
-blk_relativeTime <- function(time, id=noID(time), baseline=blk_singleValue(time, id, ind=bl.ind, select=bl.select), bl.ind=NULL, bl.select="first", diff.op=difftime_default, ...) {
+blk_relativeTime <- function(time, id=noID(time), baseline=blk_singleValue(time, id, ind=ind, select=select), ind=NULL, select="first", diff.op=difftime_default, ...) {
     blk_changeFromBaseline(time, id, baseline, diff.op=diff.op, ...)
 }
 #' @export
@@ -1000,17 +1000,15 @@ nearestMatch <- blk_nearestMatch
 #    res
 #}
 
-# ### Time After Dose
-
 #' @export
-blk_tad <- function(time, id, dose.ind, na.action=c("neg.time", "fill"), fill=NA, diff.op=difftime_default) {
+blk_timeAfter <- function(time, id, ind, na.action=c("neg.time", "fill"), fill=NA, diff.op=difftime_default) {
     .checkID(id)
-    if (!is.logical(dose.ind)) {
+    if (!is.logical(ind)) {
         warning("Expecting a logical ind")
         ind <- as.logical(ind)
     }
-    if (length(dose.ind) != length(id)) {
-        stop("Lengths of dose.ind and id must match")
+    if (length(ind) != length(id)) {
+        stop("Lengths of ind and id must match")
     }
     if (length(time) != length(id)) {
         stop("Lengths of time and id must match")
@@ -1019,9 +1017,9 @@ blk_tad <- function(time, id, dose.ind, na.action=c("neg.time", "fill"), fill=NA
     diff.op <- .mymatchfun(diff.op)
 
     temp <- time
-    temp[!dose.ind] <- NA
-    dose.time <- blk_locf(temp, id, "carry.back")
-    tdiff <- diff.op(time, dose.time)
+    temp[!ind] <- NA
+    temp <- blk_locf(temp, id, "carry.back")
+    tdiff <- diff.op(time, temp)
 
     if (na.action == "fill") {
         tdiff[tdiff < 0] <- fill
@@ -1030,20 +1028,20 @@ blk_tad <- function(time, id, dose.ind, na.action=c("neg.time", "fill"), fill=NA
 }
 
 #' @export
-tad <- blk_tad
+timeAfter <- blk_timeAfter
 
 #' @export
-blk_tad2 <- function(time, id, dose.t, id2, na.action=c("neg.time", "fill"), fill=NA, diff.op=difftime_default) {
+blk_timeAfter2 <- function(time, id, time2, id2, na.action=c("neg.time", "fill"), fill=NA, diff.op=difftime_default) {
     .checkID(id)
     .checkID(id2)
 
     temp <- rbind(
         data.frame(id=id,  time=time,   code=0),
-        data.frame(id=id2, time=dose.t, code=1))
+        data.frame(id=id2, time=time2, code=1))
 
     temp <- temp[order(temp$id, temp$time, temp$code),]
-    blk_tad(temp$time, id=temp$id, dose.ind=temp$code==1, na.action=na.action, fill=fill, diff.op=diff.op)[temp$code==0]
+    blk_timeAfter(temp$time, id=temp$id, ind=temp$code==1, na.action=na.action, fill=fill, diff.op=diff.op)[temp$code==0]
 }
 
 #' @export
-tad2 <- blk_tad2
+timeAfter2 <- blk_timeAfter2

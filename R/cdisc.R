@@ -73,6 +73,21 @@ format_dtc <- function(x) {
     strftime(x, format="%Y-%m-%dT%H:%M", tz=attr(x, "tzone"))
 }
 
+#' Combines dates and times to their ISO8601 reprensentation
+#'
+#' @param date A character vector containing dates in either 'yyyy-mm-dd' or
+#' 'mm/dd/yyyy' (note: US convension, with the month first) format.
+#' @param time A character vector containing times in 24h format 'HH:MM' (note:
+#' no seconds).
+#' @return x A character vector containing the ISO8601 representation of `x`.
+#' @export
+paste_dtc <- function(date, time) {
+    #ifelse(!is.na(date) & !is.na(time), 
+    #    paste(date, time, sep="T")
+    #    NA)
+    format_dtc(convert_date_and_time(date, time))
+}
+
 #' Convert a date and time to `POSIXct`
 #'
 #' @param date A character vector containing dates in either 'yyyy-mm-dd' or
