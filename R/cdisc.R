@@ -571,12 +571,12 @@ canonical <- function(x, ..., uid=NULL, domain=unique(x$domain), domain.fallback
         a <- attr(x[[i]], "label", exact=TRUE)
         x[[i]] <- factor(x[[i]], levels=uid)
         attr(x[[i]], "label") <- a
-        x <- x[order(x[[i]]),]
+        #x <- x[order(x[[i]]),]
     }
 
-    if (.prune) {
-        x <- prune(x)
-    }
+    #if (.prune) {
+    #    x <- prune(x)
+    #}
 
     x
 }
@@ -711,7 +711,7 @@ knitr::opts_chunk$set(echo=F, results=\'asis\', message=T, warning=T, error=T)
 #+
 
 suppressPackageStartupMessages({
-    library(CDISC)
+    library(mxutil)
     library(lumos)
 })
 

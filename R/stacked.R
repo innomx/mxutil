@@ -59,6 +59,33 @@ restoreOrder <- function(o) {
     invord
 }
 
+#' Make a Valid Block Format ID From One or More Vectors
+#'
+#' A [stacked] ID is constructed from one or more atomic vectors. If more than
+#' one atomic vector is supplied, then a compound ID is constructed by
+#' concatenating the values together with a separator.
+#' @param id An atomic vector.
+#' @param ... More atomic vectors.
+#' @param sep A character to use as a separator when forming a compound ID.
+#' @return A [stacked] ID, i.e. a factor `x` such that [is.unsorted]`(x)` is `FALSE`.
+#' @author Benjamin Rich <mail@benjaminrich.net>
+#' @seealso [stacked]
+#' @examples
+#' require(nlme)
+#' data(Phenobarb)
+#' dat <- Phenobarb[1:56,]  # First 4 subjects
+#' 
+#' attach(dat)
+#' 
+#' is.unsorted(Subject)           # TRUE  - the original column is NOT sorted
+#' is.unsorted(asID(Subject))     # FALSE - the ID is sorted
+#' 
+#' all(as.character(Subject) == as.character(asID(Subject)))  # TRUE - textually they are the same
+#' 
+#' cbind(ID=asID(Subject), dat)
+#' 
+#' detach(dat)
+#' @export
 asID <- function(id, ..., sep="|") {
     args <- list(...)
     if (length(args) > 0) {
@@ -144,6 +171,145 @@ is_sorted <- function(...) {
 }
 
 
+#' Extract a Single Value for Each Block in a Block Data Set
+#'
+#' Extract a single value for each block in a [stacked] data set.
+#'
+#' @param x A vector in \code{\link{block-format}} with respect to `id`.
+#' @param id A valid \code{\link{block-format}} ID for the input `x`.
+#' @param id2 A valid \code{\link{block-format}} ID for the return value.
+#' @param ind A vector of logicals used to filter the values of `x`.
+#' @param select When more than one value exists, which one to select.  See details.
+#' @param fill A value to use when no other value is appropriate. See details.
+#'
+#' @details
+#' These functions allow one to extract a single value per block in a
+#' \code{\link{block-format}} data set.  This can be useful in many
+#' contexts.  If the values of \code{x} in each block are not unique,
+#' then a specific value needs to be determined.  The indicator vector
+#' \code{ind} can be used to filter out specific rows that contain
+#' values of interest.  If there is more than one value, then
+#' \code{select} is used to choose either the first or the last
+#' (according to the ordering of \code{x}).  If, for a given block,
+#' there is no value at all, either because none of the rows matched
+#' the \code{ind} criteria or because the block is of size zero (see
+#' \code{\link{block-format}}), then the value of \code{fill} is used
+#' for that block.
+#' 
+#' Both \code{blk_singleValue} and \code{blk_repeatValue} determine a
+#' unique value for each block.  The difference between them is how
+#' many times each value is repeated in the result.  The vector
+#' returned by \code{blk_singleValue} has length equal to the number of
+#' blocks in \code{id}, i.e. each value appears exactly once.  For
+#' \code{blk_repeatValue}, each value is repeated the appropriate
+#' number of times so that the result is a vector in block format with
+#' respect to \code{id2}.  Thus, \code{blk_repeatValue} can effectively
+#' be used to perform a simple ``left outer join'' (or ``merge'')
+#' operation on a single variable (see example).
+#' 
+#' Neither of \code{levels(id)} and \code{levels(id2)} need be a proper
+#' subset of the other.  For levels of \code{id2} (resp. \code{id}) that
+#' are not levels of \code{id} (resp. \code{id2}), the corresponding blocks
+#' are assumed to be of size zero in \code{id} (resp. \code{id2}).
+#' 
+#' It is also possible to use \code{blk_repeatValue} in a different
+#' way, without specifying \code{id}.  In that case, \code{x} must
+#' have length equal to \code{nlevels(id2)}, i.e. it must contain a
+#' unique value for each possible value of \code{id2}, and the
+#' correspondence of values to ID's is taken from their respective
+#' ordering.  Then, each value in \code{x} is repeated the number of
+#' times that the corresponding ID appears in \code{id2}.
+#' This is equivalent to \code{blk_repeatValue(x, id=asID(levels(id2)), id2, ...)}.
+#'
+#' @return
+#' `blk_singleValue` returns a vector containing one value for each level of
+#' `id`.
+#' 
+#' `blk_repeatValue` returns a vector in `\link{block-format}` with respect to
+#' `id2`.
+#'
+#' @author Benjamin Rich <mail@benjaminrich.net>
+#' 
+#' @seealso
+#' - [block-format]
+#' - [tapply]
+#' - [merge]
+#' - [duplicated]
+#'
+#' @examples
+#' 
+#' # EXAMPLE 1
+#' require(nlme)
+#' data(Phenobarb)
+#' dat <- Phenobarb[1:56,]  # First 4 subjects
+#' dat$id <- asID(dat$Subject)
+#' 
+#' attach(dat)
+#' 
+#' # A single row per subject
+#' data.frame(id=levels(id),
+#'            Wt=blk_singleValue(Wt, id),
+#'            Apgar=blk_singleValue(Apgar, id),
+#'            final.dose=blk_singleValue(dose, id, ind=(!is.na(dose)), select="last"))
+#' 
+#' # Repeat a single value on each row for each subject
+#' cbind(dat, data.frame(
+#'   first.dose=blk_repeatValue(dose, id, ind=(!is.na(dose))),
+#'   final.dose=blk_repeatValue(dose, id, ind=(!is.na(dose)), select="last")
+#' ))
+#' 
+#' detach(dat)
+#' 
+#' ### Merging a time-fixed covariate (simple left outer join)
+#' ### -------------------------------------------------------
+#' 
+#' # Suppose subjects 1 and 2 are Male, and Subject 4 is Female, but the
+#' # gender of subject 3 is not specified.
+#' gender <- data.frame(
+#'     id=factor(c(1, 2, 4), levels=levels(dat$id)),   # Note: keeping the same factor levels helps
+#'     gender=c("Male", "Male", "Female"))
+#' 
+#' gender
+#' 
+#' # Now, 'merge' the gender with the rest of the data.
+#' # Since subject 3 is absent, it gets the value of 'fill', i.e. NA.
+#' dat$gender <- blk_repeatValue(gender$gender, gender$id, dat$id)
+#' dat
+#' 
+#' # Still returns 4 values:
+#' blk_singleValue(gender$gender, gender$id)
+#' 
+#' ### The other way of using blk_repeatValue (without specifying id)
+#' ### --------------------------------------------------------------
+#' 
+#' letter <- LETTERS[1:nlevels(dat$id)]  # Exactly one value per id
+#' cbind(dat,    letter=blk_repeatValue(c("A", "B", "C", "D"), id2=dat$id))
+#' cbind(gender, letter=blk_repeatValue(c("A", "B", "C", "D"), id2=gender$id))
+#' 
+#' # EXAMPLE 2
+#' id <- gl(4, 4)
+#' x <- LETTERS[1:16]
+#' y <- Sys.time() + 1:16
+#' 
+#' data.frame(
+#'     id       = levels(id),
+#'     first.x  = blk_singleValue(x, id),
+#'     first.y  = blk_singleValue(y, id))
+#' 
+#' data.frame(
+#'     id       = id,
+#'     x        = x,
+#'     first.x  = blk_repeatValue(x, id),
+#'     y        = y,
+#'     first.y  = blk_repeatValue(y, id))
+#' 
+#' target.id <- gl(4, 6)
+#' data.frame(
+#'     id       = target.id,
+#'     first.x  = blk_repeatValue(x, id, target.id),
+#'     first.y  = blk_repeatValue(y, id, target.id))
+#' 
+#' @export
 blk_singleValue <- function(x, id=noID(x), ind=NULL, select=c("first", "last"), fill=NA) {
     .checkID(id)
     if (length(x) == 1) {
@@ -189,9 +355,12 @@ blk_singleValue <- function(x, id=noID(x), ind=NULL, select=c("first", "last"), 
     y[use.fill] <- fill
     y
 }
+#' @export
 singleValue <- blk_singleValue
 
 
+#' @rdname blk_singleValue
+#' @export
 blk_repeatValue <- function(x, id=noID(x), id2=id, ind=NULL, select=c("first", "last"), fill=NA) {
     .checkID(id2)
     if (missing(id)) {
@@ -208,9 +377,11 @@ blk_repeatValue <- function(x, id=noID(x), id2=id, ind=NULL, select=c("first", "
     x2[is.na(factor(id2, levels=levels(id)))] <- fill
     x2
 }
+#' @export
 repeatValue <- blk_repeatValue
 
 
+#' @export
 blk_applyNto1 <- function(x, id=noID(x), apply.fun, ind=NULL, fill=NA, ...) {
     .checkID(id)
     if (length(x) != length(id)) {
@@ -256,9 +427,11 @@ blk_applyNto1 <- function(x, id=noID(x), apply.fun, ind=NULL, fill=NA, ...) {
     y <- do.call(c, yl)
     y
 }
+#' @export
 applyNto1 <- blk_applyNto1
 
 
+#' @export
 blk_applyNtoN <- function(x, id=noID(x), apply.fun, ind=NULL, fill=NA, ...) {
     .checkID(id)
     if (length(x) != length(id)) {
@@ -298,9 +471,11 @@ blk_applyNtoN <- function(x, id=noID(x), apply.fun, ind=NULL, fill=NA, ...) {
     z[!ind] <- fill
     z
 }
+#' @export
 applyNtoN <- blk_applyNtoN
 
 
+#' @export
 blk_firstOnly <- function(id=noID(ind), ind=NULL) {
     .checkID(id)
     if (is.null(ind)) {
@@ -315,11 +490,15 @@ blk_firstOnly <- function(id=noID(ind), ind=NULL) {
     }
     (ind * unlist(tapply(ind, id, cumsum, simplify=FALSE))) == 1
 }
+#' @export
 firstOnly <-  blk_firstOnly
+#' @export
 blk_onlyFirst <- blk_firstOnly
+#' @export
 onlyFirst <- blk_onlyFirst
 
 
+#' @export
 blk_lastOnly <- function(id=noID(ind), ind=NULL) {
     .checkID(id)
     if (is.null(ind)) {
@@ -340,11 +519,15 @@ blk_lastOnly <- function(id=noID(ind), ind=NULL) {
         }
     }, simplify=FALSE))
 }
+#' @export
 lastOnly <-  blk_lastOnly
+#' @export
 blk_onlyLast <- blk_lastOnly
+#' @export
 onlyLast <- blk_onlyLast
 
 
+#' @export
 blk_firstOnwards <- function(id=noID(ind), ind, include.first=TRUE, fill=FALSE) {
     .checkID(id)
     if (!is.logical(ind)) {
@@ -366,9 +549,11 @@ blk_firstOnwards <- function(id=noID(ind), ind, include.first=TRUE, fill=FALSE) 
         }
     }, include.first=include.first, fill=fill, simplify=FALSE))
 }
+#' @export
 firstOnwards <- blk_firstOnwards
 
 
+#' @export
 blk_lastOnwards <- function(id=noID(ind), ind, include.last=TRUE, fill=FALSE) {
     .checkID(id)
     if (!is.logical(ind)) {
@@ -390,21 +575,26 @@ blk_lastOnwards <- function(id=noID(ind), ind, include.last=TRUE, fill=FALSE) {
         }
     }, include.last=include.last, fill=fill, simplify=FALSE))
 }
+#' @export
 lastOnwards <- blk_lastOnwards
 
 
+#' @export
 blk_untilFirst <- function(id=noID(ind), ind, include.first=TRUE, fill=FALSE) {
     !blk_firstOnwards(id, ind, !include.first, !fill)
 }
 untilFirst <- blk_untilFirst
 
 
+#' @export
 blk_untilLast <- function(id=noID(ind), ind, include.last=TRUE, fill=FALSE) {
     !blk_lastOnwards(id, ind, !include.last, !fill)
 }
+#' @export
 untilLast <- blk_untilLast
 
 
+#' @export
 blk_locf <- function(x, id=noID(x), na.action=c("fill", "carry.back"), fill=NA) {
     .checkID(id)
     if (length(x) != length(id)) {
@@ -428,9 +618,11 @@ blk_locf <- function(x, id=noID(x), na.action=c("fill", "carry.back"), fill=NA) 
     y[is.na(ii)] <- fill
     y
 }
+#' @export
 locf <- blk_locf
 
 
+#' @export
 blk_nocb <- function(x, id=noID(x), na.action=c("fill", "carry.forward"), fill=NA) {
     .checkID(id)
     if (length(x) != length(id)) {
@@ -443,26 +635,34 @@ blk_nocb <- function(x, id=noID(x), na.action=c("fill", "carry.forward"), fill=N
     rid <- factor(rev(id), levels=rev(levels(id)))
     rev(blk_locf(rev(x), rid, na.action, fill))
 }
+#' @export
 nocb <- blk_nocb
 
 
+#' @export
 blk_sequentialID <- function(id) {
     cumsum(blk_firstOnly(id=id))
 }
+#' @export
 sequentialID <- blk_sequentialID
 
 
+#' @export
 blk_isConstant <- function(x, id=noID(x), ind=NULL) {
     all(blk_applyNto1(x, id, nunique, ind=ind, fill=0) <= 1)
 }
+#' @export
 isConstant <- blk_isConstant
 
+#' @export
 blk_isVarying <- function(x, id=noID(x), ind=NULL) {
     any(blk_applyNto1(x, id, nunique, ind=ind, fill=0) > 1)
 }
+#' @export
 isVarying <- blk_isVarying
 
 
+#' @export
 blk_count <- function(id=noID(ind), id2=id, ind=NULL) {
     res <- blk_applyNto1(x=rep(1, length(id)), id=id, apply.fun=sum, ind=ind, fill=0)
     if (!is.null(id2)) {
@@ -470,22 +670,28 @@ blk_count <- function(id=noID(ind), id2=id, ind=NULL) {
     }
     res
 }
+#' @export
 count <- blk_count
 
 
+#' @export
 blk_changeFromBaseline <- function(x, id=noID(x), baseline=blk_singleValue(x, id, ind=bl.ind, select=bl.select), bl.ind=NULL, bl.select="first", diff.op="-", ...) {
     baseline <- blk_repeatValue(baseline, id2=id)
     .mymatchfun(diff.op)(x, baseline, ...)
 }
+#' @export
 changeFromBaseline <- blk_changeFromBaseline
 
 
+#' @export
 blk_relativeTime <- function(time, id=noID(time), baseline=blk_singleValue(time, id, ind=bl.ind, select=bl.select), bl.ind=NULL, bl.select="first", diff.op=difftime_default, ...) {
     blk_changeFromBaseline(time, id, baseline, diff.op=diff.op, ...)
 }
+#' @export
 relativeTime <- blk_relativeTime
 
 
+#' @export
 blk_shift <- function(x, id=noID(x), shift.by=1, ind=NULL, fill=NA) {
     .checkID(id)
     if (length(x) != length(id)) {
@@ -527,6 +733,7 @@ blk_shift <- function(x, id=noID(x), shift.by=1, ind=NULL, fill=NA) {
     #}, shift.by=shift.by, fill=fill, simplify=FALSE))
     #y
 }
+#' @export
 shift <- blk_shift
 
 
@@ -549,6 +756,7 @@ shift <- blk_shift
 }
 
 
+#' @export
 blk_diff <- function(x, id=noID(x), ind=NULL, lag=1, fill=NA, diff.op="-", ...) {
     .checkID(id)
 
@@ -566,7 +774,8 @@ blk_diff <- function(x, id=noID(x), ind=NULL, lag=1, fill=NA, diff.op="-", ...) 
     }, lag=lag, fill=fill, simplify=FALSE, ...))
     y
 }
-diff2 <- blk_diff
+#' @export
+sdiff <- blk_diff
 
 
 .consecLengths <- function(ind) {
@@ -590,6 +799,7 @@ diff2 <- blk_diff
 }
 
 
+#' @export
 blk_findConsecutive <- function(id=noID(ind), ind, min.consec=2, fill=NA) {
     .checkID(id)
 
@@ -602,9 +812,11 @@ blk_findConsecutive <- function(id=noID(ind), ind, min.consec=2, fill=NA) {
     z[z == 0] <- fill
     z
 }
+#' @export
 findConsecutive <- blk_findConsecutive
 
 
+#' @export
 blk_concomitant <- function(time, id=noID(time), start.time, end.time, id2=id, ends=c("[]", "[)", "(]", "()")) {
     .checkID(id)
     .checkID(id2)
@@ -626,9 +838,11 @@ blk_concomitant <- function(time, id=noID(time), start.time, end.time, id2=id, e
     y    <- unlist(tapply(temp$x, temp$id, cumsum, simplify=FALSE))
     y[temp$code==2]
 }
+#' @export
 concomitant <- blk_concomitant
 
 
+#' @export
 blk_countPastEvents <- function(time, id=noID(time), event.t=time, id2=id) {
     .checkID(id)
     .checkID(id2)
@@ -640,9 +854,11 @@ blk_countPastEvents <- function(time, id=noID(time), event.t=time, id2=id) {
     temp <- temp[order(temp$id, temp$time, temp$code),]
     unlist(tapply(temp$code==0, temp$id, cumsum, simplify=FALSE))[temp$code==1]
 }
-blk_countPastEvents <- blk_countPastEvents
+#' @export
+countPastEvents <- blk_countPastEvents
 
 
+#' @export
 blk_locf2 <- function(time, id=noID(time), observ.x, observ.t, id2=id, na.action=c("fill", "carry.back"), fill=NA) {
     .checkID(id)
     .checkID(id2)
@@ -660,9 +876,11 @@ blk_locf2 <- function(time, id=noID(time), observ.x, observ.t, id2=id, na.action
     temp <- temp[order(temp$id, temp$time, temp$code),]
     blk_locf(temp$x, temp$id, na.action, fill)[temp$code==1]
 }
+#' @export
 locf2 <- blk_locf2
 
 
+#' @export
 blk_nearestMatch <- function(time, id=noID(time), observ.x, observ.t, id2=id, direction=c("forward", "backward", "both"), tol=Inf, fill=NA, na.rm=FALSE, diff.op=difftime_default) {
     .checkID(id)
     .checkID(id2)
@@ -750,10 +968,11 @@ blk_nearestMatch <- function(time, id=noID(time), observ.x, observ.t, id2=id, di
         res
     }
 }
+#' @export
 nearestMatch <- blk_nearestMatch
 
 #blk_totalDuration <- function(start.time, end.time, id=noID(start.time), id2=id, diff.op="-", fill=0) {
-#    PCSmisc:::.checkID(id)
+#    .checkID(id)
 #
 #    if (length(start.time) != length(end.time)) {
 #        stop("start.time and end.time must have the same length")
@@ -780,3 +999,51 @@ nearestMatch <- blk_nearestMatch
 #    }
 #    res
 #}
+
+# ### Time After Dose
+
+#' @export
+blk_tad <- function(time, id, dose.ind, na.action=c("neg.time", "fill"), fill=NA, diff.op=difftime_default) {
+    .checkID(id)
+    if (!is.logical(dose.ind)) {
+        warning("Expecting a logical ind")
+        ind <- as.logical(ind)
+    }
+    if (length(dose.ind) != length(id)) {
+        stop("Lengths of dose.ind and id must match")
+    }
+    if (length(time) != length(id)) {
+        stop("Lengths of time and id must match")
+    }
+    na.action <- match.arg(na.action)
+    diff.op <- .mymatchfun(diff.op)
+
+    temp <- time
+    temp[!dose.ind] <- NA
+    dose.time <- blk_locf(temp, id, "carry.back")
+    tdiff <- diff.op(time, dose.time)
+
+    if (na.action == "fill") {
+        tdiff[tdiff < 0] <- fill
+    }
+    return(tdiff)
+}
+
+#' @export
+tad <- blk_tad
+
+#' @export
+blk_tad2 <- function(time, id, dose.t, id2, na.action=c("neg.time", "fill"), fill=NA, diff.op=difftime_default) {
+    .checkID(id)
+    .checkID(id2)
+
+    temp <- rbind(
+        data.frame(id=id,  time=time,   code=0),
+        data.frame(id=id2, time=dose.t, code=1))
+
+    temp <- temp[order(temp$id, temp$time, temp$code),]
+    blk_tad(temp$time, id=temp$id, dose.ind=temp$code==1, na.action=na.action, fill=fill, diff.op=diff.op)[temp$code==0]
+}
+
+#' @export
+tad2 <- blk_tad2
