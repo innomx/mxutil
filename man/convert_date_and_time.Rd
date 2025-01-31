@@ -11,7 +11,7 @@ convert_date_and_time(date, time)
 'mm/dd/yyyy' (note: US convension, with the month first) format.}
 
 \item{time}{A character vector containing times in 24h format 'HH:MM' (note:
-no seconds).}
+no seconds) or 'HH:MM:SS' (with seconds).}
 }
 \value{
 A \link{POSIXct} object.

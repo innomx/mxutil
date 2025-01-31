@@ -93,13 +93,14 @@ paste_dtc <- function(date, time) {
 #' @param date A character vector containing dates in either 'yyyy-mm-dd' or
 #' 'mm/dd/yyyy' (note: US convension, with the month first) format.
 #' @param time A character vector containing times in 24h format 'HH:MM' (note:
-#' no seconds).
+#' no seconds) or 'HH:MM:SS' (with seconds).
 #' @return A [POSIXct] object.
 #' @examples
 #' convert_date_and_time(c("2022-01-21", "01/21/2022"), c("21:14", "9:14"))
 #' @export
 convert_date_and_time <- function(date, time) {
     date <- as.character(date)
+    time <- paste0(time, ifelse(nchar(time)==5, ":00", ""))
     i <- grepl("/", date)
     temp1 <- as.POSIXct(strptime(paste(date[i], time[i]), "%m/%d/%Y %H:%M", tz="UTC"))
     temp2 <- as.POSIXct(strptime(paste(date[!i], time[!i]), "%Y-%m-%d %H:%M", tz="UTC"))
@@ -163,9 +164,9 @@ read_data <- function(file, path=NULL, ..., .fun=NULL, .lc=TRUE, .dt=TRUE) {
         x <- read_data_excel(file=file, ...)
     } else if (grepl("\\.csv$", file)) {
         if (.dt) {
-            x <- data.table::fread(file, ...)
+            x <- data.table::fread(file=file, ...)
         } else {
-            x <- utils::read.csv(file, ...)
+            x <- utils::read.csv(file=file, ...)
         }
     } else {
         stop("Unsupported filetype")

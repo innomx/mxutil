@@ -53,6 +53,15 @@ difftime_days <- function(time1, time2) {
 #    order(unlist(tapply(.myseqalong(id), id, I, simplify=FALSE)))
 #}
 
+#' Restore Order
+#'
+#' @param o a permunation of indices from 1 to n (where n is `length(o)`)
+#' @return a permunation of indices from 1 to n
+#' @examples
+#' x <- c(2, 3, 9, 1, 8, 4, 6, 7, 5)
+#' x <- x[o <- order(x)] # Now x is sorted
+#' x[restoreOrder(o)]    # But we can restore the original order
+#' @export
 restoreOrder <- function(o) {
     invord <- numeric(length(o))
     invord[o] <- 1:length(o)
@@ -133,6 +142,7 @@ nunique <- function(x, na.rm=FALSE) {
 }
 
 
+#' @export
 is_sorted <- function(...) {
     args <- list(...)
     if ((length(args) == 1) && is.atomic(args[[1]])) {
@@ -671,7 +681,7 @@ blk_count <- function(id=noID(ind), id2=id, ind=NULL) {
     res
 }
 #' @export
-count <- blk_count
+stacked_count <- blk_count
 
 
 #' @export
@@ -734,7 +744,7 @@ blk_shift <- function(x, id=noID(x), shift.by=1, ind=NULL, fill=NA) {
     #y
 }
 #' @export
-shift <- blk_shift
+stacked_shift <- blk_shift
 
 
 # Re-implement the standard diff function to allow for a diff.op function
@@ -775,7 +785,16 @@ blk_diff <- function(x, id=noID(x), ind=NULL, lag=1, fill=NA, diff.op="-", ...) 
     y
 }
 #' @export
-sdiff <- blk_diff
+stacked_diff <- blk_diff
+
+# Alias, with different default for diff.op
+#' @export
+blk_intereventTime <- function(time, id=noID(time), ind=NULL, lag=1, fill=NA, diff.op=difftime_default, ...) {
+    blk_diff(x=time, id=id, ind=ind, lag=lag, fill=fill, diff.op=diff.op, ...)
+}
+
+#' @export
+intereventTime <- blk_intereventTime
 
 
 .consecLengths <- function(ind) {
@@ -808,7 +827,7 @@ blk_findConsecutive <- function(id=noID(ind), ind, min.consec=2, fill=NA) {
     z[ind] <- rep(ifelse(y >= min.consec, 1, 0), times=y)
     y <- y[y >= min.consec]
     z[z==1] <- rep(.myseqalong(y), times=y)
-    z <- z - blk_applyNtoN(z-1, id, min, ind=(z > 0), fill=0)
+    #z <- z - blk_applyNtoN(z-1, id, min, ind=(z > 0), fill=0)
     z[z == 0] <- fill
     z
 }
@@ -900,10 +919,10 @@ blk_nearestMatch <- function(time, id=noID(time), observ.x, observ.t, id2=id, di
     if (length(observ.x) != length(id2)) {
         stop("Lengths of observ.x and id2 must match")
     }
-    if (!is.sorted(id, time)) {
+    if (!is_sorted(id, time)) {
         warning("time is not sorted within blocks of id.")
     }
-    if (!is.sorted(id2, observ.t)) {
+    if (!is_sorted(id2, observ.t)) {
         warning("observ.t is not sorted within blocks of id2.")
     }
 
@@ -962,7 +981,7 @@ blk_nearestMatch <- function(time, id=noID(time), observ.x, observ.t, id2=id, di
     res <- observ.x[ix1]
     res[is.na(ix1)] <- fill
 
-    if (!is.sorted(id, time)) {
+    if (!is_sorted(id, time)) {
         res[order(order(id, time))]   # This will restore the order
     } else {
         res
