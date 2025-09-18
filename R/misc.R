@@ -487,40 +487,62 @@ blk_ii <- function(time, id=noID(time), dose.ind, diff.op=difftime_default) {
 interdoseInterval <- blk_ii
 
 #' @export
-blk_addl <- function(ii, id=noID(dose.ind), dose.ind, dose, tol.ii=1e-5, tol.dose=1e-5, min.consec=2, include.last=FALSE, diff.op=difftime_default) {
+blk_addl <- function(ii, id=noID(dose.ind), dose.ind, dose, ignore, tol.ii=1e-5, tol.dose=1e-5, min.consec=2, include.last=FALSE) {
 
     .checkID(id)
 
+    if (missing(ignore) || is.null(ignore)) {
+        ignore <- rep(FALSE, length(id))
+    }
+    if (!is.logical(ignore)) {
+        stop("'ignore' must be logical")
+    }
     if (!is.numeric(dose)) {
-        stop("'dose' must be numeric times.")
+        stop("'dose' must be numeric")
     }
-    if (!(length(ii)==length(id) && length(dose.ind)==length(id) && length(dose)==length(id))) {
-        stop("'ii', 'id', 'dose.ind' and 'dose' must all have the same length.")
-    }
-
-    y <- blk_diff(ii, id=id, ind=dose.ind)
-    y <- blk_shift(y, id=id, shift.by= -1, ind=dose.ind, fill=0)
-
-    z <- blk_diff(dose, id=id, ind=dose.ind)
-    z <- blk_shift(z, id=id, shift.by= -1, ind=dose.ind, fill=0)
-
-    flag <- dose.ind & (abs(y) < tol.ii) & (abs(z) < tol.dose)
-
-    # Do this twice, because the last ii can be anything
-    for (i in 1:2) {
-        flag2 <- blk_shift(flag, id=id, fill=FALSE)
-        flag[dose.ind & !flag & flag2] <- flag2[dose.ind & !flag & flag2]
+    if (!(length(ii)==length(id) && length(dose.ind)==length(id) && length(dose)==length(id) && length(ignore)==length(id))) {
+        stop("'ii', 'id', 'dose.ind', 'dose' and 'ignore' must all have the same length.")
     }
 
-    if (!include.last) {
-        flag <- flag & blk_shift(dose.ind, id=id, shift.by= -1, fill=FALSE)
+    .blk_addl <- function(ii, id, dose.ind, dose, tol.ii, tol.dose, min.consec, include.last) {
+
+        y <- blk_diff(ii, id=id, ind=dose.ind)
+        y <- blk_shift(y, id=id, shift.by= -1, ind=dose.ind, fill=0)
+
+        z <- blk_diff(dose, id=id, ind=dose.ind)
+        z <- blk_shift(z, id=id, shift.by= -1, ind=dose.ind, fill=0)
+
+        flag <- dose.ind & (abs(y) < tol.ii) & (abs(z) < tol.dose)
+
+        # Do this twice, because the last ii can be anything
+        for (i in 1:2) {
+            flag2 <- blk_shift(flag, id=id, fill=FALSE)
+            flag[dose.ind & !flag & flag2] <- flag2[dose.ind & !flag & flag2]
+        }
+
+        if (!include.last) {
+            flag <- flag & blk_shift(dose.ind, id=id, shift.by= -1, fill=FALSE)
+        }
+
+        cons <- blk_findConsecutive(id, ind=(dose.ind & flag), min.consec=min.consec, fill=0)
+        i <- (cons > 0)
+        id2 <- asID(cons[i])
+        addl <- ifelse(dose.ind, 0, NA)
+        addl[i] <- ifelse(blk_firstOnly(id2), blk_count(id=id2) - 1, -1)
+        addl
     }
 
-    cons <- blk_findConsecutive(id, ind=(dose.ind & flag), min.consec=min.consec, fill=0)
-    i <- (cons > 0)
-    id2 <- asID(cons[i])
-    addl <- ifelse(dose.ind, 0, NA)
-    addl[i] <- ifelse(blk_firstOnly(id2), blk_count(id=id2) - 1, -1)
+    addl <- rep(NA_integer_, length(id))
+    addl[!ignore] <- .blk_addl(
+        ii           = ii[!ignore],
+        id           = id[!ignore],
+        dose.ind     = dose.ind[!ignore],
+        dose         = dose[!ignore],
+        tol.ii       = tol.ii,
+        tol.dose     = tol.dose,
+        min.consec   = min.consec,
+        include.last = include.last
+    )
     addl
 }
 
