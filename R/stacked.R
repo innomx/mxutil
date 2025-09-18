@@ -2,8 +2,7 @@
 .mymatchfun <- match.fun
 
 
-# Subtracts time2 from time1.
-# If both are of class POSIXt, gives the result in hours.
+#' @export
 difftime_default <- function(time1, time2) {
     if (length(time1) != length(time2)) {
         stop("Length of time1 and time2 should match.")
@@ -20,6 +19,7 @@ difftime_default <- function(time1, time2) {
 }
 
 
+#' @export
 difftime_hours <- function(time1, time2) {
     if (length(time1) != length(time2)) {
         stop("Length of time1 and time2 should match.")
@@ -31,6 +31,7 @@ difftime_hours <- function(time1, time2) {
 }
 
 
+#' @export
 difftime_days <- function(time1, time2) {
     if (length(time1) != length(time2)) {
         stop("Length of time1 and time2 should match.")
