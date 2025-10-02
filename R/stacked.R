@@ -823,6 +823,10 @@ intereventTime <- blk_intereventTime
 blk_findConsecutive <- function(id=noID(ind), ind, min.consec=2, fill=NA) {
     .checkID(id)
 
+    if (!is.logical(ind)) {
+        stop("'ind' must be logical")
+    }
+
     y <- unlist(tapply(ind, id, .consecLengths, simplify=FALSE))
     z <- rep(0, length(ind))
     z[ind] <- rep(ifelse(y >= min.consec, 1, 0), times=y)

@@ -497,6 +497,9 @@ blk_addl <- function(ii, id=noID(dose.ind), dose.ind, dose, ignore, tol.ii=1e-5,
     if (!is.logical(ignore)) {
         stop("'ignore' must be logical")
     }
+    if (!is.logical(dose.ind)) {
+        stop("'dose.ind' must be logical")
+    }
     if (!is.numeric(dose)) {
         stop("'dose' must be numeric")
     }
@@ -506,25 +509,29 @@ blk_addl <- function(ii, id=noID(dose.ind), dose.ind, dose, ignore, tol.ii=1e-5,
 
     .blk_addl <- function(ii, id, dose.ind, dose, tol.ii, tol.dose, min.consec, include.last) {
 
-        y <- blk_diff(ii, id=id, ind=dose.ind)
-        y <- blk_shift(y, id=id, shift.by= -1, ind=dose.ind, fill=0)
+        # Computing the ADDL (additional doses) column in a NONMEM dataset from
+        # individual dose records is kind of tricky and there are quite a few edge
+        # cases to worry about.
 
-        z <- blk_diff(dose, id=id, ind=dose.ind)
-        z <- blk_shift(z, id=id, shift.by= -1, ind=dose.ind, fill=0)
+        y <- blk_diff(ifelse(dose.ind, ii, NA), id=id)
 
-        flag <- dose.ind & (abs(y) < tol.ii) & (abs(z) < tol.dose)
+        z <- blk_diff(ifelse(dose.ind, dose, NA), id=id)
 
-        # Do this twice, because the last ii can be anything
-        for (i in 1:2) {
-            flag2 <- blk_shift(flag, id=id, fill=FALSE)
-            flag[dose.ind & !flag & flag2] <- flag2[dose.ind & !flag & flag2]
-        }
+        flag <- dose.ind & !is.na(y) & !is.na(z) & (abs(y) < tol.ii) & (abs(z) < tol.dose)
+        flag <- flag | blk_lastOnly(id=id, ind=dose.ind)  # For the last dose, II can be anything
+
+        mincons <- min.consec + ifelse(include.last, -1, 0)
+        cons <- blk_findConsecutive(id=id, ind=flag, min.consec=mincons, fill=0)
+
+        extend <- blk_shift(cons, id=id, shift.by= -1, ind=dose.ind, fill=0)
+        extend <- ifelse(cons==0 & extend>0, extend, 0)
+        cons <- pmax(cons, extend)
 
         if (!include.last) {
-            flag <- flag & blk_shift(dose.ind, id=id, shift.by= -1, fill=FALSE)
+            flaglast <- blk_shift(flag, id=id, shift.by= -1, fill=0) == 0
+            cons[flaglast] <- 0
         }
 
-        cons <- blk_findConsecutive(id, ind=(dose.ind & flag), min.consec=min.consec, fill=0)
         i <- (cons > 0)
         id2 <- asID(cons[i])
         addl <- ifelse(dose.ind, 0, NA)
