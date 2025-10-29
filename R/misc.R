@@ -513,22 +513,30 @@ blk_addl <- function(ii, id=noID(dose.ind), dose.ind, dose, ignore, tol.ii=1e-5,
         # individual dose records is kind of tricky and there are quite a few edge
         # cases to worry about.
 
-        y <- blk_diff(ifelse(dose.ind, ii, NA), id=id)
-
+        y <- blk_diff(ifelse(dose.ind, ii,   NA), id=id)
         z <- blk_diff(ifelse(dose.ind, dose, NA), id=id)
 
-        flag <- dose.ind & !is.na(y) & !is.na(z) & (abs(y) < tol.ii) & (abs(z) < tol.dose)
-        flag <- flag | blk_lastOnly(id=id, ind=dose.ind)  # For the last dose, II can be anything
+        flag1 <- dose.ind & !is.na(y) & (abs(y) < tol.ii)
+        flag2 <- dose.ind & !is.na(z) & (abs(z) < tol.dose)
 
-        mincons <- min.consec + ifelse(include.last, -1, 0)
+        flag <- flag1 & flag2
+
+        mincons <- min.consec - 1
         cons <- blk_findConsecutive(id=id, ind=flag, min.consec=mincons, fill=0)
 
-        extend <- blk_shift(cons, id=id, shift.by= -1, ind=dose.ind, fill=0)
+        extend <- blk_shift(cons, id=id, shift.by=1, fill=0)
         extend <- ifelse(cons==0 & extend>0, extend, 0)
-        cons <- pmax(cons, extend)
+        cons <- ifelse(dose.ind & flag2, pmax(cons, extend), 0)
+
+        extend <- blk_shift(cons, id=id, shift.by= -1, fill=0)
+        extend <- ifelse(cons==0 & extend>0, extend, 0)
+        cons <- ifelse(dose.ind, pmax(cons, extend), 0)
 
         if (!include.last) {
-            flaglast <- blk_shift(flag, id=id, shift.by= -1, fill=0) == 0
+            i <- (cons > 0)
+            id2 <- asID(cons[i])
+            flaglast <- rep(FALSE, length(cons))
+            flaglast[i] <- blk_lastOnly(id2)
             cons[flaglast] <- 0
         }
 
