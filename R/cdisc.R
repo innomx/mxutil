@@ -325,11 +325,11 @@ merge_supp <- function(base, supp, .lc=TRUE) {
             newv <- qnam
         }
         if (is.na(idvar)) {
-            temp <- supp[supp$qnam==qnam,]
+            temp <- supp[supp$qnam==qnam,, drop=FALSE]
             id1 <- with(temp, paste(usubjid))
             id2 <- paste(base$usubjid)
         } else {
-            temp <- supp[supp$qnam==qnam & supp$idvar==idvar,]
+            temp <- supp[supp$qnam==qnam & supp$idvar==idvar,, drop=FALSE]
             id1 <- with(temp, paste(usubjid, idvarval, sep="|"))
             id2 <- paste(base$usubjid, paste(base[[tolower(idvar)]]), sep="|")
         }
@@ -535,7 +535,7 @@ qw <- function(...) {
 #' prune(x)
 #' @export
 prune <- function(x) {
-    x[, sapply(x, function(y) !all(is.na(y)))]
+    x[, sapply(x, function(y) !all(is.na(y))), drop=FALSE]
 
 }
 
@@ -580,7 +580,7 @@ canonical <- function(x, ..., uid=NULL, domain=unique(x$domain), domain.fallback
     if ("usubjid" %in% tolower(names(x))) {
         i <- match("usubjid", tolower(names(x)))
         if (!is.null(uid)) {
-            x <- x[ x[[i]] %in% uid ]
+            x <- x[ x[[i]] %in% uid,, drop=FALSE]
         } else {
             uid <- unique(x[[i]])
         }
