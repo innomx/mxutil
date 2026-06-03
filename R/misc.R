@@ -79,8 +79,30 @@ Replace <- function(x, y, z=NA) {
 }
 
 #' Extract Match of Regular Exptression From String
+#'
+#' @param re A regular expression string.
+#' @param x A `character` vector.
+#' @param capture Return the captured match using parentheses.
+#' @param simplify Should the captured result be simplified to a vector (if
+#' possible) or left as a matrix?
+#' @param perl Passed to [regexpr()].
+#' 
+#' @return A `character` vector which contains the matches.
+#' 
+#' @author Benjamin Rich <mail@benjaminrich.net>
+#' 
+#' @seealso
+#'   [regexpr()]
+#' 
+#' @examples
+#' x <- c("Cat", "Bat", "Goat")
+#' extract_match("^..", x)  # First 2 letters
+#' 
+#' x <- c("Fruit = banana", "Color is yellow", "I don't know")
+#' extract_match("(?:=|is) *(.*)", x)  # Capture what comes after "=" or "is"
+#' 
 #' @export
-extract_match <- function(re, x, capture=T, simplify=T, perl=T, ...) {
+extract_match <- function(re, x, capture=TRUE, simplify=TRUE, perl=TRUE, ...) {
     s <- regexpr(re, x, perl=perl, ...)
     myregmatches <- function(x, m) {
         so <- as.numeric(m)
@@ -103,12 +125,23 @@ extract_match <- function(re, x, capture=T, simplify=T, perl=T, ...) {
 }
 
 #' Extract Number From String
+#'
+#' @param x A `character` vector.
+#' @param convert Convert the result result to `numeric`?
+#' @return A vector, which is `numeric` if `convert` is `TRUE`, and
+#' `character` otherwise. It contains the extracted numbers from each input
+#' string.
+#' @examples
+#' x <- c("Day 5", "30 minutes post-dose", "One 2 Three")
+#' extract_number_from_string(x)
+#' extract_number_from_string(x, convert=FALSE)
 #' @export
-extract_number_from_string <- function(x, convert=T) {
+extract_number_from_string <- function(x, convert=TRUE) {
     re <- "-?([[:digit:]]+(\\.[[:digit:]]*)?|\\.[[:digit:]]+)"
     re <- paste0(re, "([eE]-?[[:digit:]]+)?")
-    re <- paste0("(^|[[:space:]])(", re, ")($|[[:space:]])")
+    #re <- paste0("(^|[[:space:]])(", re, ")($|[[:space:]])")
     x <- extract_match(re, x, capture=FALSE)
+    x <- trimws(x)
     if (isTRUE(convert)) {
         as.numeric(x)
     } else {
@@ -116,7 +149,8 @@ extract_number_from_string <- function(x, convert=T) {
     }
 }
 
-#' Extract Number From String
+#' Extract Clock Time From Datetime
+#'
 #' @examples
 #' extract_clocktime_from_dtc(c("2024-01-01T12:16", "2024-01-01T12:1x"))
 #' @export
@@ -363,10 +397,16 @@ bsa.dubois <- function(..., wt.kg, ht.cm) {
 #' 
 #' @export
 lbm.james <- function(..., wt.kg, ht.cm, is.male) {
-    ifelse(is.male,
-        1.10*wt.kg - 128*(wt.kg/ht.cm)^2,
-        1.07*wt.kg - 148*(wt.kg/ht.cm)^2
+    stopifnot(
+        "wt.kg must be numeric"   = is.numeric(wt.kg),
+        "ht.cm must be numeric"   = is.numeric(ht.cm),
+        "is.male must be logical" = is.logical(is.male)
     )
+
+    c1 <- ifelse(is.male, 1.10, 1.07)
+    c2 <- ifelse(is.male, 128, 148)
+
+    c1*wt.kg - c2*(wt.kg/ht.cm)^2
 }
 
 #' Skeletal Muscle Mass Using the Lee Formula

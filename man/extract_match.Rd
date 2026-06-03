@@ -4,8 +4,37 @@
 \alias{extract_match}
 \title{Extract Match of Regular Exptression From String}
 \usage{
-extract_match(re, x, capture = T, simplify = T, perl = T, ...)
+extract_match(re, x, capture = TRUE, simplify = TRUE, perl = TRUE, ...)
+}
+\arguments{
+\item{re}{A regular expression string.}
+
+\item{x}{A \code{character} vector.}
+
+\item{capture}{Return the captured match using parentheses.}
+
+\item{simplify}{Should the captured result be simplified to a vector (if
+possible) or left as a matrix?}
+
+\item{perl}{Passed to \code{\link[=regexpr]{regexpr()}}.}
+}
+\value{
+A \code{character} vector which contains the matches.
 }
 \description{
 Extract Match of Regular Exptression From String
+}
+\examples{
+x <- c("Cat", "Bat", "Goat")
+extract_match("^..", x)  # First 2 letters
+
+x <- c("Fruit = banana", "Color is yellow", "I don't know")
+extract_match("(?:=|is) *(.*)", x)  # Capture what comes after "=" or "is"
+
+}
+\seealso{
+\code{\link[=regexpr]{regexpr()}}
+}
+\author{
+Benjamin Rich \href{mailto:mail@benjaminrich.net}{mail@benjaminrich.net}
 }

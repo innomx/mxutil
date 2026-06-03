@@ -4,8 +4,23 @@
 \alias{extract_number_from_string}
 \title{Extract Number From String}
 \usage{
-extract_number_from_string(x, convert = T)
+extract_number_from_string(x, convert = TRUE)
+}
+\arguments{
+\item{x}{A \code{character} vector.}
+
+\item{convert}{Convert the result result to \code{numeric}?}
+}
+\value{
+A vector, which is \code{numeric} if \code{convert} is \code{TRUE}, and
+\code{character} otherwise. It contains the extracted numbers from each input
+string.
 }
 \description{
 Extract Number From String
+}
+\examples{
+x <- c("Day 5", "30 minutes post-dose", "One 2 Three")
+extract_number_from_string(x)
+extract_number_from_string(x, convert=FALSE)
 }

@@ -2,12 +2,12 @@
 % Please edit documentation in R/misc.R
 \name{extract_clocktime_from_dtc}
 \alias{extract_clocktime_from_dtc}
-\title{Extract Number From String}
+\title{Extract Clock Time From Datetime}
 \usage{
 extract_clocktime_from_dtc(x)
 }
 \description{
-Extract Number From String
+Extract Clock Time From Datetime
 }
 \examples{
 extract_clocktime_from_dtc(c("2024-01-01T12:16", "2024-01-01T12:1x"))
